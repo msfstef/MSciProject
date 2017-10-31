@@ -10,7 +10,7 @@ for i in range(1,N):
     m_state += q.basis(N,i) * 1./(np.sqrt(N))
 
 # Generate random measurement state.
-#m_state = q.rand_ket(N)
+m_state = q.rand_ket(N)
 
 # Generate pure state density matrix.
 system = q.rand_dm_ginibre(N, rank=1)
@@ -21,11 +21,18 @@ system = q.rand_dm(N, 1)
 # Generate maximally coherent density matrix.
 #system = q.ket2dm(m_state)
 
-H = q.charge(N,1)
-#print(system)
 
-#a=np.diag(np.sqrt(system.diag())*m_state)
-#print(np.abs(np.vdot(a,a)))
+state1 = (1/np.sqrt(2))*(q.basis(3,1) + q.basis(3,0))
+state2 = (1/np.sqrt(2))*(q.basis(3,2) + q.basis(3,0))
+print(state1)
+print(state2)
+system1 = q.ket2dm(state1)
+system2 = q.ket2dm(state2)
+system = 0.5*system1 + 0.5*system2
+
+H = q.charge(N,1)
+print(system)
+
 
 def prob_dist(t):
     m_state_t = q.sesolve(H, m_state,[0.,t]).states[1]
@@ -40,17 +47,18 @@ def moment(n):
     return (1/(2*np.pi))*M[0]
 
 
-def mom_func3(c=1):
+def mom_func3(c=100):
     m1 = moment(1)
     m2 = moment(2)
     m3 = moment(3)
     #print(8*c/243.)
     return 2*c*m1*m1*m1 -3*c*m2*m1 + c*m3
     
-
+def mom_product(n1=1, n2=2):
+    return moment(n1)*moment(n2)
 
 #print(moment(2))
-#print(mom_func3())
+print(mom_func3())
 #print(8/243.)
 
 
@@ -67,7 +75,7 @@ def plot_pattern():
     plt.ylim(0,1)
 
 
-def convex_test():
+def convex_test(func=mom_func3):
     p = np.random.rand()
     rho1 = q.rand_dm(N, 1)
     rho2 = q.rand_dm(N, 1)
@@ -75,16 +83,19 @@ def convex_test():
     
     global system
     system = rho1
-    a = p*mom_func3()
+    a = p*func()
     system = rho2
-    b = (1-p)*mom_func3()
+    b = (1-p)*func()
     system = combined
-    c = mom_func3()
+    c = func()
     
     if (a+b < c):
         print("FAILED")
         print(a+b)
         print(a,b)
         print(c)
-    
-convex_test()
+
+
+#for i in range(100):
+#    print(i)
+#    convex_test(mom_product)
