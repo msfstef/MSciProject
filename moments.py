@@ -120,17 +120,6 @@ def mom_func(n, *args):
     return result
 
 
-
-def plot_pattern():
-    b = []
-    t_list =np.linspace(0.,2*np.pi,200)
-    for t in t_list:
-        b.append(prob_dist(t))        
-    plt.plot(t_list,b)
-    plt.xlim(0,2*np.pi)
-    plt.ylim(0,N)
-
-
 def convex_test(func, *args):
     p = np.random.rand()
     rho1 = q.rand_dm(N, 1)
