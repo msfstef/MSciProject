@@ -5,10 +5,6 @@ import matplotlib.pyplot as plt
 import decompose as dcp
 
 N=3
-
-
-
-N=3
 H = q.num(N,1)
 
 def max_coherent(k): #Not really max_coherent unless k==N
@@ -26,13 +22,13 @@ m_state = max_coherent(N)
 #m_state = q.rand_ket(N)
 
 # Generate pure state density matrix.
-system = q.rand_dm_ginibre(N, rank=1)
+#system = q.rand_dm_ginibre(N, rank=1)
 
 # Generate random density matrix.
 #system = q.rand_dm(N, 1)
 
 # Generate maximally coherent density matrix.
-#system = q.ket2dm(max_coherent(N))
+system = q.ket2dm(max_coherent(N))
 
 #Testing for 2-coherent mixed states.
 #state1 = (1/np.sqrt(2))*(q.basis(3,1) + q.basis(3,0))
@@ -142,6 +138,14 @@ def convex_test(func, *args):
 
 
 #plot_pattern()
+       
+# Testing hierarchical method        
+#a,b,c = 1,10,10
+#system = q.ket2dm(max_coherent(3))
+#k3=mom_func(3,a,b,c)
+#system = q.ket2dm(max_coherent(2))
+#k2=mom_func(3,a,b,c)
+#print((k3-k2)/k2)
 
 
 
