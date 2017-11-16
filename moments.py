@@ -7,13 +7,17 @@ import decompose as dcp
 N=3
 
 
-def max_coherent(k):
-    state = q.basis(N,0) * 1./(np.sqrt(N))
+
+N=3
+H = q.num(N,1)
+
+def max_coherent(k): #Not really max_coherent unless k==N
+    if (k==0 or k>N):
+        raise ValueError('Parameter k must satisfy 1 <= k <= N')
+    state = q.basis(N,0)
     for i in range(1,k):
-        state += q.basis(N,i) * 1./(np.sqrt(N))
-    return state
-
-
+        state += q.basis(N,i)
+    return state * 1./np.sqrt(N)
 
 # Generate coherent measurement state.
 m_state = max_coherent(N)
@@ -30,7 +34,6 @@ system = q.rand_dm_ginibre(N, rank=1)
 # Generate maximally coherent density matrix.
 #system = q.ket2dm(max_coherent(N))
 
-
 #Testing for 2-coherent mixed states.
 #state1 = (1/np.sqrt(2))*(q.basis(3,1) + q.basis(3,0))
 #state2 = (1/np.sqrt(2))*(q.basis(3,2) + q.basis(3,0))
@@ -39,22 +42,24 @@ system = q.rand_dm_ginibre(N, rank=1)
 #system = 0.5*system1 + 0.5*system2
 
 
-H = q.charge(N,1)
-print(system)
 
 
+
+# Basic functions
 def prob_dist(t):
-    m_state_t = q.sesolve(H, m_state,[0.,t]).states[1] * np.sqrt(N)
-    #print(m_state_t)
-    return q.expect(system,m_state_t)
+    m_state_t = q.sesolve(-H, m_state, [0.,t]).states[1] * np.sqrt(N)
+    expec = q.expect(system, m_state_t)
+    #print(m_state_t, '\n\n', expec)  #Normalisation with np.sqrt(N)?
+    return expec
 
 def integrand(t,n):
-    return np.power(prob_dist(t),n)
-
+    return np.power(prob_dist(t), n)
 
 def moment(n):
-    M = ig.quad(integrand,0.,2*np.pi,(n))
+    M = ig.quad(integrand, 0., 2*np.pi, (n), full_output=0)
+    #print(M)
     return (1/(2*np.pi))*M[0]
+
 
 def mom_product(*args):
     """
@@ -69,6 +74,18 @@ def mom_product(*args):
         result *= moment(args[i])
     return result
 
+def plot_pattern():
+    b = []
+    t_list =np.linspace(0., 2*np.pi, 200)
+    for t in t_list:
+        b.append(prob_dist(t))        
+    plt.plot(t_list, b)
+    plt.xlim(0, 2*np.pi)
+    plt.ylim(0, N)
+
+
+
+
 
 def mom_func3_OLD(c=100):
     m1 = moment(1)
@@ -81,7 +98,7 @@ def mom_func3(a,b,c):
     m1 = moment(1)
     m2 = moment(2)
     m3 = moment(3)
-    print(m1,m2,m3)
+    #print(m1,m2,m3)
     #print(8*c/243.)
     return a*m1*m1*m1 +b*m2*m1 + c*m3
 
@@ -137,6 +154,15 @@ def convex_test(func, *args):
 
 #plot_pattern()
 
+
+
+#print(system)
+#print()
+#print(system.eigenenergies())
+#print()
+#print(system.eigenstates())
+#
+#
 
 #for i in range(100):
 #    print(i)
