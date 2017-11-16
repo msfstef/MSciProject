@@ -2,6 +2,8 @@ import qutip as q
 import numpy as np
 from scipy import integrate as ig
 import matplotlib.pyplot as plt
+import decompose as dcp
+
 N=3
 
 
@@ -54,9 +56,18 @@ def moment(n):
     M = ig.quad(integrand,0.,2*np.pi,(n))
     return (1/(2*np.pi))*M[0]
 
-
-def mom_product(n1=1, n2=2):
-    return moment(n1)*moment(n2)
+def mom_product(*args):
+    """
+    *args is the moment numbers for
+    the desired product.
+    
+    mom_product(2,3,1) =
+    moment(2)*moment(3)*moment(1)
+    """
+    result = 1.
+    for i in range(len(args)):
+        result *= moment(args[i])
+    return result
 
 
 def mom_func3_OLD(c=100):
@@ -74,7 +85,22 @@ def mom_func3(a,b,c):
     #print(8*c/243.)
     return a*m1*m1*m1 +b*m2*m1 + c*m3
 
-
+def mom_func(n, *args):
+    """
+    General F_n function.
+    Note that moments are recalculated for each term,
+    can make more efficient.
+    """
+    combinations = dcp.decomposeInt(n)
+    assert (len(args) == len(combinations)), (
+    "%r coefficients must be specified." % len(combinations))
+    terms = []
+    for comb in combinations:
+        terms.append(mom_product(*comb))
+    terms = np.array(terms)
+    coeff = np.array(args)
+    result = np.sum(coeff*terms)
+    return result
 
 
 
@@ -112,6 +138,6 @@ def convex_test(func, *args):
 #plot_pattern()
 
 
-for i in range(100):
-    print(i)
-    convex_test(mom_func3, -1,-1,2)
+#for i in range(100):
+#    print(i)
+#    convex_test(mom_func3, -1,-1,2)
