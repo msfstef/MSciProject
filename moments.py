@@ -4,19 +4,26 @@ from scipy import integrate as ig
 import matplotlib.pyplot as plt
 import decompose as dcp
 
-N=3
+N=4
 H = q.num(N,1)
 
-def max_coherent(k): #Not really max_coherent unless k==N
+def max_coherent(k):
     if (k==0 or k>N):
         raise ValueError('Parameter k must satisfy 1 <= k <= N')
     state = q.basis(N,0)
     for i in range(1,k):
         state += q.basis(N,i)
-    return state * 1./np.sqrt(N)
+    return state * 1./np.sqrt(k)
 
 # Generate coherent measurement state.
 m_state = max_coherent(N)
+
+# Generate ALMOST coherent measurement state.
+#eps = 1
+#
+#m_state = max_coherent(N)
+#m_state -= q.basis(N,0)*eps
+#m_state += q.basis(N,1)*(np.sqrt(1 - m_state[0]**2 - (N-2)/N) - 1/np.sqrt(N))
 
 # Generate random measurement state.
 #m_state = q.rand_ket(N)
@@ -35,7 +42,7 @@ system = q.ket2dm(max_coherent(N))
 #state2 = (1/np.sqrt(2))*(q.basis(3,2) + q.basis(3,0))
 #system1 = q.ket2dm(state1)
 #system2 = q.ket2dm(state2)
-#system = 0.5*system1 + 0.5*system2
+#system = 0.5*system1 + 0.5*system24
 
 
 
@@ -43,7 +50,7 @@ system = q.ket2dm(max_coherent(N))
 
 # Basic functions
 def prob_dist(t):
-    m_state_t = q.sesolve(-H, m_state, [0.,t]).states[1] * np.sqrt(N)
+    m_state_t = q.sesolve(-H, m_state, [0.,t]).states[1]
     expec = q.expect(system, m_state_t)
     #print(m_state_t, '\n\n', expec)  #Normalisation with np.sqrt(N)?
     return expec
@@ -77,26 +84,8 @@ def plot_pattern():
         b.append(prob_dist(t))        
     plt.plot(t_list, b)
     plt.xlim(0, 2*np.pi)
-    plt.ylim(0, N)
-
-
-
-
-
-def mom_func3_OLD(c=100):
-    m1 = moment(1)
-    m2 = moment(2)
-    m3 = moment(3)
-    #print(8*c/243.)
-    return 2*c*m1*m1*m1 -3*c*m2*m1 + c*m3
-
-def mom_func3(a,b,c):
-    m1 = moment(1)
-    m2 = moment(2)
-    m3 = moment(3)
-    #print(m1,m2,m3)
-    #print(8*c/243.)
-    return a*m1*m1*m1 +b*m2*m1 + c*m3
+    plt.ylim(0, 1)
+    return np.array(b)
 
 def mom_func(n, *args):
     """
@@ -115,6 +104,23 @@ def mom_func(n, *args):
     result = np.sum(coeff*terms)
     return result
 
+
+
+# Testing
+def mom_func3_OLD(c=100):
+    m1 = moment(1)
+    m2 = moment(2)
+    m3 = moment(3)
+    #print(8*c/243.)
+    return 2*c*m1*m1*m1 -3*c*m2*m1 + c*m3
+
+def mom_func3(a,b,c):
+    m1 = moment(1)
+    m2 = moment(2)
+    m3 = moment(3)
+    #print(m1,m2,m3)
+    #print(8*c/243.)
+    return a*m1*m1*m1 +b*m2*m1 + c*m3
 
 def convex_test(func, *args):
     p = np.random.rand()
@@ -136,9 +142,27 @@ def convex_test(func, *args):
         print(a,b)
         print(c)
 
+a = np.array([moment(1), moment(2), moment(3)])
+system = q.ket2dm(max_coherent(N-1))
+b = np.array([moment(1), moment(2), moment(3)])
+system = q.ket2dm(max_coherent(N-2))
+c = np.array([moment(1), moment(2), moment(3)])
+
+#nt = 1
+#tmp = moment(nt)
+#plot_pattern()
+#system = q.ket2dm(max_coherent(N-1))
+#curr = moment(nt)
+#plot_pattern()
+#print(m_state)
+#print(system)
+#print()
+#print()
+#print("N:", tmp)
+#print("N-:", curr)
+#print("diff:", tmp - curr)
 
 #plot_pattern()
-       
 # Testing hierarchical method        
 #a,b,c = 1,10,10
 #system = q.ket2dm(max_coherent(3))
@@ -147,7 +171,22 @@ def convex_test(func, *args):
 #k2=mom_func(3,a,b,c)
 #print((k3-k2)/k2)
 
-
+#system = q.rand_dm(N, 1)
+#b1 = plot_pattern()
+#print(system)
+#m1 = []
+#for i in range(1,10):
+#    m1.append(moment(i))
+#system = q.rand_dm(N, 1)
+#b2 = plot_pattern()
+#print(system)
+#m2 = []
+#for i in range(1,10):
+#    m2.append(moment(i))
+#(m, n) = (m1, m2) if m1[-1] > m2[-1] else (m2, m1)
+#for i in range(len(m)):
+#    if m[i]<n[i]: print('FAIL')
+#    print('{0:.4f}, {1:.4f}'.format(m[i], n[i]))
 
 #print(system)
 #print()
