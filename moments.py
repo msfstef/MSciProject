@@ -215,7 +215,7 @@ def find_max_func(N_, guess=[], e=0):
                                        {'type':'eq', 'fun': norm_con2}])
     return result #(result.x[:int(len(guess)/2)], result.x[int(len(guess)/2):])
 
-def find_prob_pattern(n, plot_probs=False):
+def find_prob_pattern(n, plot_probs=False): #legends don't work
     res = find_max_func(n)
     syst = np.array(res.x[:n])
     meas = np.array(res.x[n:])
@@ -223,18 +223,21 @@ def find_prob_pattern(n, plot_probs=False):
     
     if plot_probs:
         x = np.arange(1,n+1)
+        xx = np.linspace(1,n,200)
         f = lambda arg, aa, bb, cc: aa*arg**2 + bb*arg + cc
         
         sopt, scov = opt.curve_fit(f, x, syst)
         mopt, mcov = opt.curve_fit(f, x, meas)
         
-        plt.plot(x, syst)
-        plt.plot(x, f(x, *sopt))
+        plt.plot(x, syst, label='Probabilities')
+        plt.plot(xx, f(xx, *sopt), label='Curve fit')
         plt.title('System')
+        plt.legend()
         plt.figure()
-        plt.plot(x, meas)
-        plt.plot(x, f(x, *mopt))
+        plt.plot(x, meas, label='Probabilities')
+        plt.plot(xx, f(xx, *mopt), label='Curve fit')
         plt.title('Measurement')
+        plt.legend()
         
         return val, syst, meas, (sopt, scov, mopt, mcov)
     else:
@@ -247,9 +250,10 @@ def plot_max_pattern(n):
         v,s,m = find_prob_pattern(i)
         vals.append(v); syst.append(s); meas.append(m)
     x = np.arange(1,n+1)
-    plt.plot(x, vals)
-    x = np.linspace(1,7,200)
-    plt.plot(x, 11./20 * x + 3/20)
+    plt.plot(x, vals, label='Maxima')
+    x = np.linspace(1,n,200)
+    plt.plot(x, 11./20 * x + 3/20, label='Curve fit')
+    plt.legend()
     
     return vals, syst, meas
 
