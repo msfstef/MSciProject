@@ -6,7 +6,7 @@ import decompose as dcp
 import scipy.optimize as opt
 
 warnings=True
-N=10
+N=4
 H = q.num(N,1)
 
 
@@ -18,7 +18,12 @@ def max_coherent(k):
         state += q.basis(N,i)
     return state * 1./np.sqrt(k)
 
-
+def mixed_state(coeff, s):
+     if (s<0 or s>1):
+        raise ValueError('Parameter s must satisfy 0 <= k <= 1')
+     sys = (1-s)*q.ket2dm(state(*coeff)) + s/len(coeff) * q.qeye(len(coeff))
+     return sys
+     
 def state(*coeff):
     if (np.sum(coeff) != 1 or len(coeff)>N) and warnings:
         raise ValueError('There must be at most N probabilities that sum to 1')
@@ -26,7 +31,7 @@ def state(*coeff):
     for i in range(len(coeff)-1):
         state += np.sqrt(coeff[i+1])*q.basis(N,i+1)
     return state
-        
+
 def two_coherent(c1):
     if c1 > 1. or c1 < 0.:
         raise ValueError('c1 must be 0<= c1 <=1')
@@ -189,15 +194,32 @@ def plot_max_func(steps=10,moment_no=3):
     plt.show()
 
 
-def func(args):
+def func(args, s=0, n=3):
     global warnings
     warnings=False
     global system
     global m_state
-    system = q.ket2dm(state(*args[:int(len(args)/2)]))
+    system = mixed_state(args[:int(len(args)/2)], s)
     m_state = state(*args[int(len(args)/2):])
     #print(m_state)
-    return -(moment(3)/(moment(1)**2))
+    return -(moment(n)/(moment(1)**(n-1)))
+
+def func_half(var, param=-1, meas=True, s=0, n=3):
+    global warnings
+    warnings=False
+    global system
+    global m_state
+    
+    if meas:
+         system = mixed_state([*var],s)
+         m_state = state(*param)
+    else:
+         system = mixed_state([*param],s)
+         m_state = state(*var)
+    return -(moment(n)/(moment(1)**(n-1)))
+
+def norm_con1_half(args):
+    return np.sum(args) - 1.
 
 def norm_con1(args):
     return np.sum(args[:int(len(args)/2)]) - 1.
@@ -205,14 +227,23 @@ def norm_con1(args):
 def norm_con2(args):
     return np.sum(args[int(len(args)/2):]) - 1.
 
-def find_max_func(N_, guess=[], e=0):
+def find_max_func(N_, guess=[], e=0, s=0, n=3):
     if guess == []:
         guess = (1./N_)*np.ones(2*N_)
     #print(guess)
-    result = opt.minimize(func, guess, 
+    result = opt.minimize(func, guess, args=(s, n),
                         bounds=[(e,1.-e) for i in range(2*N_)],
                         constraints = [{'type':'eq', 'fun': norm_con1},
                                        {'type':'eq', 'fun': norm_con2}])
+    return result #(result.x[:int(len(guess)/2)], result.x[int(len(guess)/2):])
+
+def find_max_func_half(N_, param, guess=[], meas=True, s=0, n=3):
+    if guess == []:
+         guess = np.array(np.load('meas_prob.npy')[N_-1])
+    print(guess)
+    result = opt.minimize(func_half, guess, args=(param, meas, s, n),
+                        bounds=[(0.,1.) for i in range(N_)],
+                        constraints = [{'type':'eq', 'fun': norm_con1_half}])
     return result #(result.x[:int(len(guess)/2)], result.x[int(len(guess)/2):])
 
 def find_prob_pattern(n, plot_probs=False): #legends don't work
