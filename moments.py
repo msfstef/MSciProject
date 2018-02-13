@@ -19,10 +19,12 @@ def max_coherent(k):
     return state * 1./np.sqrt(k)
 
 def mixed_state(coeff, s):
-     if (s<0 or s>1):
-        raise ValueError('Parameter s must satisfy 0 <= k <= 1')
-     sys = (1-s)*q.ket2dm(state(*coeff)) + s/len(coeff) * q.qeye(len(coeff))
-     return sys
+    if (s<0 or s>1):
+       raise ValueError('Parameter s must satisfy 0 <= k <= 1')
+    identity = q.Qobj(np.diag(np.concatenate(
+            [np.ones(len(coeff)),np.zeros(N-len(coeff))])))
+    sys = (1-s)*q.ket2dm(state(*coeff)) + s/len(coeff) * identity
+    return sys
      
 def state(*coeff):
     if (np.sum(coeff) != 1 or len(coeff)>N) and warnings:
@@ -37,14 +39,6 @@ def two_coherent(c1):
         raise ValueError('c1 must be 0<= c1 <=1')
     state = np.sqrt(c1) * q.basis(N,0)
     state += np.sqrt(1-c1) * q.basis(N,1)
-    return state
-
-def three_coherent(c1,c2):
-    if c1 > 1. or c1 < 0. or c2 > 1-c1 or c2 < 0.:
-        raise ValueError('c1 and c2 must be 0<= c1, c2 <=1')
-    state = np.sqrt(c1) * q.basis(N,0)
-    state += np.sqrt(c2) * q.basis(N,1)
-    state += np.sqrt(1-c1-c2) * q.basis(N,2)
     return state
 
 # Generate coherent measurement state.
@@ -227,12 +221,12 @@ def norm_con1(args):
 def norm_con2(args):
     return np.sum(args[int(len(args)/2):]) - 1.
 
-def find_max_func(N_, guess=[], e=0, s=0, n=3):
+def find_max_func(N_, guess=[], s=0, n=3):
     if guess == []:
         guess = (1./N_)*np.ones(2*N_)
     #print(guess)
     result = opt.minimize(func, guess, args=(s, n),
-                        bounds=[(e,1.-e) for i in range(2*N_)],
+                        bounds=[(0,1.) for i in range(2*N_)],
                         constraints = [{'type':'eq', 'fun': norm_con1},
                                        {'type':'eq', 'fun': norm_con2}])
     return result #(result.x[:int(len(guess)/2)], result.x[int(len(guess)/2):])
@@ -287,6 +281,11 @@ def plot_max_pattern(n):
     plt.legend()
     
     return vals, syst, meas
+
+
+
+
+
 
 #a = np.array([moment(1), moment(2), moment(3),moment(4)])
 #system = q.ket2dm(max_coherent(N-1))
