@@ -6,7 +6,7 @@ import decompose as dcp
 import scipy.optimize as opt
 
 warnings=True
-N=4
+N=7
 H = q.num(N,1)
 
 
@@ -234,11 +234,32 @@ def find_max_func(N_, guess=[], s=0, n=3):
 def find_max_func_half(N_, param, guess=[], meas=True, s=0, n=3):
     if guess == []:
          guess = np.array(np.load('meas_prob.npy')[N_-1])
-    print(guess)
     result = opt.minimize(func_half, guess, args=(param, meas, s, n),
                         bounds=[(0.,1.) for i in range(N_)],
                         constraints = [{'type':'eq', 'fun': norm_con1_half}])
     return result #(result.x[:int(len(guess)/2)], result.x[int(len(guess)/2):])
+
+
+
+def find_mixed_thresh(N_, n):
+    max_coh = list((1./N_)*np.ones(N_)) 
+    opt_res = find_max_func_half(N_,max_coh,max_coh,True,0,n)
+    result = -opt_res['fun']
+    meas_coeff = opt_res['x']
+    max_coh_small = list((1./(N_-1))*np.ones(N_-1))
+    bound = -find_max_func_half(N_-1,max_coh_small,max_coh_small,True,0,n)['fun']
+    s = 0
+    while result > bound:
+        s+=0.01
+        result = -func_half(max_coh,meas_coeff,True,s,n)
+    return (result,s)
+    
+    
+
+
+
+
+
 
 def find_prob_pattern(n, plot_probs=False): #legends don't work
     res = find_max_func(n)
