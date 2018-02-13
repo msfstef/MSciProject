@@ -252,10 +252,26 @@ def find_mixed_thresh(N_, n):
     while result > bound:
         s+=0.01
         result = -func_half(max_coh,meas_coeff,True,s,n)
-    return (result,s)
+    return (s,result)
     
     
-
+def plot_mixed_thresh(n_max = 8, N_max = 5):
+    global system
+    global m_state
+    nvals = np.arange(3,n_max+1)
+    Nvals = np.arange(3,N_max+1)
+    vals = np.empty((len(nvals),len(Nvals)))
+    for i in range(len(nvals)):
+        for j in range(len(Nvals)):
+            vals[i,j]= find_mixed_thresh(Nvals[j],nvals[i])[0]
+    n_vals, N_vals = np.meshgrid(Nvals,nvals)
+    print(n_vals,N_vals)
+    print(nvals,Nvals)
+    print(vals)
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    ax.plot_surface(n_vals,N_vals,vals)
+    plt.show()
 
 
 
