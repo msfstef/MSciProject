@@ -4,9 +4,10 @@ from scipy import integrate as ig
 import matplotlib.pyplot as plt
 import decompose as dcp
 import scipy.optimize as opt
+import scipy.linalg as lin
 
 warnings=True
-N=7
+N=10
 H = q.num(N,1)
 
 
@@ -221,10 +222,27 @@ def norm_con1(args):
 def norm_con2(args):
     return np.sum(args[int(len(args)/2):]) - 1.
 
+def guess_func(N_):
+    vals = np.linspace(-1,1,N_)
+    c = 1.15/N_ # numerical
+    guess = 3*(N_-1)/(N_+1.)*(1./N_ -c)*vals**2 + c
+    return list(guess)
+
+def imperfect_state(coeff,error=0.2):
+    s = state(*coeff)
+    H_rand = q.rand_herm(len(coeff))
+    H_rand = H_rand/H_rand.norm()
+    H_rand = q.Qobj(lin.block_diag(H_rand[:],
+                    np.zeros((N-len(coeff),N-len(coeff)))))
+    s_e = q.sesolve(H_rand, s, [0.,error]).states[1]
+    return list(np.ndarray.flatten(s_e[:len(coeff)]))
+    
+
+
 def find_max_func(N_, guess=[], s=0, n=3):
     if guess == []:
         guess = (1./N_)*np.ones(2*N_)
-    #print(guess)
+        #guess = np.tile(guess_func(N_),2)
     result = opt.minimize(func, guess, args=(s, n),
                         bounds=[(0,1.) for i in range(2*N_)],
                         constraints = [{'type':'eq', 'fun': norm_con1},
@@ -233,7 +251,8 @@ def find_max_func(N_, guess=[], s=0, n=3):
 
 def find_max_func_half(N_, param, guess=[], meas=True, s=0, n=3):
     if guess == []:
-         guess = np.array(np.load('meas_prob.npy')[N_-1])
+         #guess = np.array(np.load('meas_prob.npy')[N_-1])
+         guess = guess_func(N_)
     result = opt.minimize(func_half, guess, args=(param, meas, s, n),
                         bounds=[(0.,1.) for i in range(N_)],
                         constraints = [{'type':'eq', 'fun': norm_con1_half}])
@@ -241,13 +260,15 @@ def find_max_func_half(N_, param, guess=[], meas=True, s=0, n=3):
 
 
 
-def find_mixed_thresh(N_, n):
+def find_mixed_thresh(N_, n, error=0):
     max_coh = list((1./N_)*np.ones(N_)) 
-    opt_res = find_max_func_half(N_,max_coh,max_coh,True,0,n)
+    opt_res = find_max_func_half(N_,max_coh,[],True,0,n)
     result = -opt_res['fun']
     meas_coeff = opt_res['x']
     max_coh_small = list((1./(N_-1))*np.ones(N_-1))
-    bound = -find_max_func_half(N_-1,max_coh_small,max_coh_small,True,0,n)['fun']
+    bound = -find_max_func_half(N_-1,max_coh_small,[],True,0,n)['fun']
+    if error:
+        meas_coeff = imperfect_state(meas_coeff,error)
     s = 0
     while result > bound:
         s+=0.01
@@ -255,7 +276,7 @@ def find_mixed_thresh(N_, n):
     return (s,result)
     
     
-def plot_mixed_thresh(n_max = 8, N_max = 5):
+def plot_mixed_thresh(n_max, N_max, error=0):
     global system
     global m_state
     nvals = np.arange(3,n_max+1)
@@ -263,9 +284,8 @@ def plot_mixed_thresh(n_max = 8, N_max = 5):
     vals = np.empty((len(nvals),len(Nvals)))
     for i in range(len(nvals)):
         for j in range(len(Nvals)):
-            vals[i,j]= find_mixed_thresh(Nvals[j],nvals[i])[0]
+            vals[i,j]= find_mixed_thresh(Nvals[j],nvals[i], error)[0]
     n_vals, N_vals = np.meshgrid(Nvals,nvals)
-    print(n_vals,N_vals)
     print(nvals,Nvals)
     print(vals)
     fig = plt.figure()
