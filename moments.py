@@ -7,8 +7,10 @@ import scipy.optimize as opt
 import scipy.linalg as lin
 
 warnings=True
-N=10
+N=3
 H = q.num(N,1)
+#nss=0.5
+#H = q.Qobj(np.diag([0,2,4]))
 
 
 def max_coherent(k):
@@ -228,9 +230,10 @@ def guess_func(N_):
     guess = 3*(N_-1)/(N_+1.)*(1./N_ -c)*vals**2 + c
     return list(guess)
 
-def imperfect_state(coeff,error=0.2):
+def imperfect_state(coeff,error=0.2, H_rand=False):
     s = state(*coeff)
-    H_rand = q.rand_herm(len(coeff))
+    if H_rand == False:
+        H_rand = q.rand_herm(len(coeff),1)
     H_rand = H_rand/H_rand.norm()
     H_rand = q.Qobj(lin.block_diag(H_rand[:],
                     np.zeros((N-len(coeff),N-len(coeff)))))
@@ -241,8 +244,8 @@ def imperfect_state(coeff,error=0.2):
 
 def find_max_func(N_, guess=[], s=0, n=3):
     if guess == []:
-        guess = (1./N_)*np.ones(2*N_)
-        #guess = np.tile(guess_func(N_),2)
+        #guess = (1./N_)*np.ones(2*N_)
+        guess = np.tile(guess_func(N_),2)
     result = opt.minimize(func, guess, args=(s, n),
                         bounds=[(0,1.) for i in range(2*N_)],
                         constraints = [{'type':'eq', 'fun': norm_con1},
@@ -293,6 +296,26 @@ def plot_mixed_thresh(n_max, N_max, error=0):
     ax.plot_surface(n_vals,N_vals,vals)
     plt.show()
 
+
+def plot_func_sensitivity(epsilon_max, N_err=5, step_size=0.01):
+    global system
+    global m_state
+    N_=3
+    max_coh = list((1./N_)*np.ones(N_)) 
+    opt_res = find_max_func_half(N_,max_coh,[],False,s=0,n=3)
+    meas_coeff = opt_res['x']
+    epsilon_list = np.linspace(0,epsilon_max,int(epsilon_max/step_size))
+    val_list = np.zeros((N_err,int(epsilon_max/step_size)))
+    for i in range(N_err):
+        H_rand = q.rand_herm(N_,1)
+        for j in range(len(epsilon_list)):
+            meas_coeff_err = imperfect_state(meas_coeff,epsilon_list[j],H_rand)
+            val_list[i][j] = -func(max_coh+meas_coeff_err,s=0,n=3)
+    for i in range(N_err):
+        plt.plot(epsilon_list,val_list[i])
+    plt.xlim(0,epsilon_max)
+    plt.xlabel('epsilon')
+    plt.ylabel('M3/M1^2')
 
 
 
