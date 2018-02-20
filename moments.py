@@ -337,15 +337,15 @@ def pattern_diff(t, args, N_,prob_no):
 def pattern_diff_func(args, N_, prob_no):
 #    result = ig.quad(pattern_diff, 0., 2*np.pi, 
 #                     (args,N_, prob_no), full_output=0)[0]
+#    result = result/(2*np.pi)
     
     # Discretised integral for efficiency
     result=0
     steps = 100
     for i in np.linspace(0,2*np.pi,steps):
         result += pattern_diff(i,args,N_, prob_no)
-    result = result*2*np.pi/steps
+    result = result/steps
     
-    result = result/(2*np.pi)
     print(result)
     return result
 
@@ -365,8 +365,8 @@ def minimise_pattern_diff(N_, redund=1):
     opt_res = find_max_func_half(N_,max_coh,[],True,0,n)
     meas_coeff = opt_res['x']
     m_state = state(*meas_coeff)
-    threshold = find_mixed_thresh(N_,n)[0]
-    threshold=0.7
+    #threshold = find_mixed_thresh(N_,n)[0]
+    threshold=0.35
     system = mixed_state(max_coh, threshold)
 
     state_no = int(misc.comb(N_,N_-1))
@@ -388,7 +388,8 @@ def minimise_pattern_diff(N_, redund=1):
                         bounds=[(0,1.) for i in range(arg_no+redund*state_no)],
                         constraints = constraints, method='SLSQP')
     
-    plot_pattern('Mixed '+str(N_) +r'-coherent State ($\lambda$='+str(threshold)+')')
+    plot_pattern('Mixed '+str(N_) +r'-coherent State ($\lambda$='+
+                 str(round(threshold,3))+')')
     coeffs = result['x']
     probs = np.array(coeffs[-state_no*redund:])
     pattern_state = []
