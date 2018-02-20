@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import decompose as dcp
 import scipy.optimize as opt
 import scipy.linalg as lin
+import scipy.misc as misc
 
 warnings=True
-N=3
+N=10
 H = q.num(N,1)
 #nss=0.5
 #H = q.Qobj(np.diag([0,2,4]))
@@ -108,15 +109,14 @@ def mom_product(*args):
     return result
 
 
-def plot_pattern():
+def plot_pattern(label='system'):
     b = []
     t_list =np.linspace(0., 2*np.pi, 200)
     for t in t_list:
         b.append(prob_dist(t))        
-    plt.plot(t_list, b)
+    plt.plot(t_list, b, label=label)
     plt.xlim(0, 2*np.pi)
     plt.ylim(0, 1)
-    #return np.array(b)
 
 def mom_func(n, *args):
     """
@@ -136,14 +136,6 @@ def mom_func(n, *args):
     result = np.sum(coeff*terms)
     return result
 
-
-def mom_func3(a,b,c):
-    m1 = moment(1)
-    m2 = moment(2)
-    m3 = moment(3)
-    #print(m1,m2,m3)
-    #print(8*c/243.)
-    return a*m1*m1*m1 +b*m2*m1 + c*m3
 
 def convex_test(func, *args):
     p = np.random.rand()
@@ -287,13 +279,20 @@ def plot_mixed_thresh(n_max, N_max, error=0):
     vals = np.empty((len(nvals),len(Nvals)))
     for i in range(len(nvals)):
         for j in range(len(Nvals)):
+            print(i,j)
             vals[i,j]= find_mixed_thresh(Nvals[j],nvals[i], error)[0]
     n_vals, N_vals = np.meshgrid(Nvals,nvals)
     print(nvals,Nvals)
     print(vals)
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    ax.plot_surface(n_vals,N_vals,vals)
+    ax.plot_surface(n_vals,N_vals,vals,cmap='winter',antialiased=False,linewidth=0)
+    ax.xaxis.set_rotate_label(False)
+    ax.yaxis.set_rotate_label(False)
+    ax.zaxis.set_rotate_label(False)
+    ax.set_xlabel(r'$k$',fontsize=16)
+    ax.set_ylabel(r'$n$',fontsize=16)
+    ax.set_zlabel(r'$\lambda_{th}$',fontsize=16)
     plt.show()
 
 
@@ -301,8 +300,10 @@ def plot_func_sensitivity(epsilon_max, N_err=5, step_size=0.01):
     global system
     global m_state
     N_=3
+    n=3
+    s=0
     max_coh = list((1./N_)*np.ones(N_)) 
-    opt_res = find_max_func_half(N_,max_coh,[],False,s=0,n=3)
+    opt_res = find_max_func_half(N_,max_coh,[],False,s,n)
     meas_coeff = opt_res['x']
     epsilon_list = np.linspace(0,epsilon_max,int(epsilon_max/step_size))
     val_list = np.zeros((N_err,int(epsilon_max/step_size)))
@@ -310,13 +311,99 @@ def plot_func_sensitivity(epsilon_max, N_err=5, step_size=0.01):
         H_rand = q.rand_herm(N_,1)
         for j in range(len(epsilon_list)):
             meas_coeff_err = imperfect_state(meas_coeff,epsilon_list[j],H_rand)
-            val_list[i][j] = -func(max_coh+meas_coeff_err,s=0,n=3)
+            val_list[i][j] = -func(max_coh+meas_coeff_err,s,n)
     for i in range(N_err):
         plt.plot(epsilon_list,val_list[i])
     plt.xlim(0,epsilon_max)
     plt.xlabel('epsilon')
-    plt.ylabel('M3/M1^2')
+    plt.ylabel('M'+n+'/M1^'+(n-1))
 
+
+
+def pattern_diff(t, args, N_,prob_no):
+    m_state_t = q.sesolve(-H, m_state, [0.,t]).states[1]
+    P_mixed = q.expect(system, m_state_t)
+    probs = np.array(args[-prob_no:])
+    P_list = np.empty(int(len(args[:-prob_no])/(N_-1)))
+    
+    for i in range(int(len(args[:-prob_no])/(N_-1))):
+        state_coeffs = [0,*args[i*(N_-1):(i+1)*(N_-1)]]
+        state_coeffs = np.roll(state_coeffs,i)
+        pattern_state = q.ket2dm(state(*state_coeffs))
+        P_list[i]= q.expect(pattern_state, m_state_t)
+
+    return np.abs(P_mixed -  np.sum(probs*P_list))
+    
+def pattern_diff_func(args, N_, prob_no):
+#    result = ig.quad(pattern_diff, 0., 2*np.pi, 
+#                     (args,N_, prob_no), full_output=0)[0]
+    
+    # Discretised integral for efficiency
+    result=0
+    steps = 100
+    for i in np.linspace(0,2*np.pi,steps):
+        result += pattern_diff(i,args,N_, prob_no)
+    result = result*2*np.pi/steps
+    
+    result = result/(2*np.pi)
+    print(result)
+    return result
+
+def bindConstFunction(name,N_,i):
+    def func(args):
+        return np.sum(args[i*(N_-1):(i+1)*(N_-1)]) - 1.
+    func.__name__ = name
+    return func
+
+def minimise_pattern_diff(N_, redund=1):
+    global warnings
+    warnings=False
+    global m_state
+    global system
+    n = 3
+    max_coh = list((1./N_)*np.ones(N_))
+    opt_res = find_max_func_half(N_,max_coh,[],True,0,n)
+    meas_coeff = opt_res['x']
+    m_state = state(*meas_coeff)
+    threshold = find_mixed_thresh(N_,n)[0]
+    threshold=0.7
+    system = mixed_state(max_coh, threshold)
+
+    state_no = int(misc.comb(N_,N_-1))
+    
+    constraints = [{'type':'eq', 'fun': bindConstFunction('func'+str(i),N_,i)} 
+                for i in range(redund*state_no)]
+    constraints.append({'type':'eq', 'fun': (lambda args: 
+                    np.sum(args[-redund*state_no:])-1.)})
+
+    arg_no = redund*(N_-1)*state_no
+    arg_guess= []
+    for i in range(redund*state_no):
+        arg_guess += list(*np.random.dirichlet(np.ones(N_-1),size=1))
+    prob_guess = list(*np.random.dirichlet(np.ones(redund*state_no),size=1))
+    guess = arg_guess+prob_guess
+    print(guess)
+
+    result = opt.minimize(pattern_diff_func, guess, args=(N_, redund*state_no),
+                        bounds=[(0,1.) for i in range(arg_no+redund*state_no)],
+                        constraints = constraints, method='SLSQP')
+    
+    plot_pattern('Mixed '+str(N_) +r'-coherent State ($\lambda$='+str(threshold)+')')
+    coeffs = result['x']
+    probs = np.array(coeffs[-state_no*redund:])
+    pattern_state = []
+    for i in range(int(len(coeffs[:-state_no*redund])/(N_-1))):
+        state_coeffs = [0,*coeffs[i*(N_-1):(i+1)*(N_-1)]]
+        state_coeffs = np.roll(state_coeffs,i)
+        pattern_state.append(q.ket2dm(state(*state_coeffs)))
+    system = np.sum(probs*pattern_state)
+    plot_pattern('Mixed '+str(N_-1)+'-coherent State')
+    plt.legend()
+    
+    return result
+    
+    
+    
 
 
 
