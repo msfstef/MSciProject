@@ -109,14 +109,19 @@ def mom_product(*args):
     return result
 
 
-def plot_pattern(label='system'):
+def plot_pattern(label='system', ax = 'None'):
     b = []
     t_list =np.linspace(0., 2*np.pi, 200)
     for t in t_list:
         b.append(prob_dist(t))        
-    plt.plot(t_list, b, label=label)
-    plt.xlim(0, 2*np.pi)
-    plt.ylim(0, 1)
+    if ax == 'None':
+        plt.plot(t_list, b, label=label)
+        plt.xlim(0, 2*np.pi)
+        plt.ylim(0, 1)
+    else:
+        ax.plot(t_list, b, label=label)
+        ax.set_xlim(0, 2*np.pi)
+        ax.set_ylim(0, 1)
 
 def mom_func(n, *args):
     """
@@ -366,8 +371,8 @@ def minimise_pattern_diff(N_, redund=1):
     meas_coeff = opt_res['x']
     m_state = state(*meas_coeff)
     #threshold = find_mixed_thresh(N_,n)[0]
-    threshold=0.35
-    system = mixed_state(max_coh, threshold)
+    threshold=0.5
+    system = mixed_state([0.5,0.2,0.3], threshold)
 
     state_no = int(misc.comb(N_,N_-1))
     
@@ -388,8 +393,17 @@ def minimise_pattern_diff(N_, redund=1):
                         bounds=[(0,1.) for i in range(arg_no+redund*state_no)],
                         constraints = constraints, method='SLSQP')
     
+    
+    total_state_no = state_no*redund
+    fig = plt.figure(figsize=(6, 6))
+    grid = plt.GridSpec(2, total_state_no)
+    total_ax = fig.add_subplot(grid[0, :])
+    axarr = [fig.add_subplot(grid[1,0])]
+    axarr += [fig.add_subplot(grid[1,i],yticklabels=[] ,sharey=axarr[0]) 
+            for i in range(1,total_state_no)]
+    
     plot_pattern('Mixed '+str(N_) +r'-coherent State ($\lambda$='+
-                 str(round(threshold,3))+')')
+                 str(round(threshold,3))+')', total_ax)
     coeffs = result['x']
     probs = np.array(coeffs[-state_no*redund:])
     pattern_state = []
@@ -398,8 +412,12 @@ def minimise_pattern_diff(N_, redund=1):
         state_coeffs = np.roll(state_coeffs,i)
         pattern_state.append(q.ket2dm(state(*state_coeffs)))
     system = np.sum(probs*pattern_state)
-    plot_pattern('Mixed '+str(N_-1)+'-coherent State')
-    plt.legend()
+    plot_pattern('Mixed '+str(N_-1)+'-coherent State', total_ax)
+    total_ax.legend()
+
+    for i in range(len(axarr)):
+        system = pattern_state[i]
+        plot_pattern('',axarr[i])
     
     return result
     
