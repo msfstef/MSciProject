@@ -45,6 +45,10 @@ def two_coherent(c1):
     state += np.sqrt(1-c1) * q.basis(N,1)
     return state
 
+
+def ratio_anal(k):
+    return ((1/k)+(6/k**3)*((1/6.)*k*(k-1)*(2*k-1)) + (2/k**4)*((1/40)*k*(k-2)*(k-1)*(2-7*k+11*k**2)))
+
 # Generate coherent measurement state.
 m_state = max_coherent(N)
 
@@ -57,17 +61,17 @@ m_state = max_coherent(N)
 #m_state += q.basis(N,1)*(np.sqrt(1 - m_state[0]**2 - (N-2)/N) - 1/np.sqrt(N))
 
 # Generate random measurement state.
-#m_state = q.rand_ket(N)
+m_state = q.rand_ket(N)
 
 # Generate pure state density matrix.
 #system = q.rand_dm_ginibre(N, rank=1)
 
 # Generate random density matrix.
-#system = q.rand_dm(N, 1)
+# system = q.rand_dm(N, 1)
 
 # Generate maximally coherent density matrix.
-system = q.ket2dm(max_coherent(N))
-
+# system = q.ket2dm(max_coherent(N))
+system = q.ket2dm(q.rand_ket(N))
 #Testing for 2-coherent mixed states.
 #state1 = (1/np.sqrt(2))*(q.basis(3,1) + q.basis(3,0))
 #state2 = (1/np.sqrt(2))*(q.basis(3,2) + q.basis(3,0))
@@ -370,9 +374,11 @@ def minimise_pattern_diff(N_, redund=1):
     opt_res = find_max_func_half(N_,max_coh,[],True,0,n)
     meas_coeff = opt_res['x']
     m_state = state(*meas_coeff)
+
+    m_state = q.Qobj(np.concatenate([q.rand_ket(N_)[:].T[0],np.zeros(N-N_)]).T)
     #threshold = find_mixed_thresh(N_,n)[0]
-    threshold=0.5
-    system = mixed_state([0.5,0.2,0.3], threshold)
+    threshold=0.10
+    system = mixed_state([0.4,0.3,0.3], threshold)
 
     state_no = int(misc.comb(N_,N_-1))
     
@@ -399,11 +405,10 @@ def minimise_pattern_diff(N_, redund=1):
     grid = plt.GridSpec(2, total_state_no)
     total_ax = fig.add_subplot(grid[0, :])
     axarr = [fig.add_subplot(grid[1,0])]
-    axarr += [fig.add_subplot(grid[1,i],yticklabels=[] ,sharey=axarr[0]) 
+    axarr += [fig.add_subplot(grid[1,i],yticklabels=[]) 
             for i in range(1,total_state_no)]
     
-    plot_pattern('Mixed '+str(N_) +r'-coherent State ($\lambda$='+
-                 str(round(threshold,3))+')', total_ax)
+    
     coeffs = result['x']
     probs = np.array(coeffs[-state_no*redund:])
     pattern_state = []
@@ -413,6 +418,10 @@ def minimise_pattern_diff(N_, redund=1):
         pattern_state.append(q.ket2dm(state(*state_coeffs)))
     system = np.sum(probs*pattern_state)
     plot_pattern('Mixed '+str(N_-1)+'-coherent State', total_ax)
+    
+    system = mixed_state([0.4,0.3,0.3], threshold)
+    plot_pattern('Mixed '+str(N_) +r'-coherent State ($\lambda$='+
+                 str(round(threshold,3))+')', total_ax)
     total_ax.legend()
 
     for i in range(len(axarr)):
