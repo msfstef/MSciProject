@@ -383,7 +383,7 @@ def bindConstFunction(name,N_,i):
     func.__name__ = name
     return func
 
-def minimise_pattern_diff(N_, redund=1):
+def minimise_pattern_diff(N_, thresh = False, redund=1):
     global warnings
     warnings=False
     global m_state
@@ -394,10 +394,12 @@ def minimise_pattern_diff(N_, redund=1):
     meas_coeff = opt_res['x']
     m_state = state(*meas_coeff)
 
-    m_state = q.Qobj(np.concatenate([q.rand_ket(N_)[:].T[0],np.zeros(N-N_)]).T)
-    #threshold = find_mixed_thresh(N_,n)[0]
-    threshold=0.10
-    system = mixed_state([0.4,0.3,0.3], threshold)
+    #m_state = q.Qobj(np.concatenate([q.rand_ket(N_)[:].T[0],np.zeros(N-N_)]).T)
+    if thresh == False:
+        threshold = find_mixed_thresh(N_,n)[0]
+    else:
+        threshold=thresh
+    system = mixed_state(max_coh, threshold)
 
     state_no = int(misc.comb(N_,N_-1))
     
@@ -438,7 +440,7 @@ def minimise_pattern_diff(N_, redund=1):
     system = np.sum(probs*pattern_state)
     plot_pattern('Mixed '+str(N_-1)+'-coherent State', total_ax)
     
-    system = mixed_state([0.4,0.3,0.3], threshold)
+    system = mixed_state(max_coh, threshold)
     plot_pattern('Mixed '+str(N_) +r'-coherent State ($\lambda$='+
                  str(round(threshold,3))+')', total_ax)
     total_ax.legend()
