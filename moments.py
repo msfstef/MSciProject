@@ -47,7 +47,8 @@ def two_coherent(c1):
 
 
 def ratio_anal(k):
-    return ((1/k)+(6/k**3)*((1/6.)*k*(k-1)*(2*k-1)) + (2/k**4)*((1/40)*k*(k-2)*(k-1)*(2-7*k+11*k**2)))
+    return ((1/k)+(6/k**3)*((1/6.)*k*(k-1)*(2*k-1)) + 
+            (2/k**4)*((1/40)*k*(k-2)*(k-1)*(2-7*k+11*k**2)))
 
 # Generate coherent measurement state.
 m_state = max_coherent(N)
@@ -231,15 +232,22 @@ def guess_func(N_):
     guess = 3*(N_-1)/(N_+1.)*(1./N_ -c)*vals**2 + c
     return list(guess)
 
-def imperfect_state(coeff,error=0.2, H_rand=False):
+def rand_ginibre(N_):
+    return q.Qobj(np.sum(np.random.randn(*((N_,N_) + (2,))) * 
+                         np.array([1,1j]), axis=-1))
+
+def imperfect_state(coeff,error=0.2, H_rand=False, with_phase=False):
     s = state(*coeff)
     if H_rand == False:
-        H_rand = q.rand_herm(len(coeff),1)
+        H_rand = q.rand_dm_ginibre(len(coeff))
     H_rand = H_rand/H_rand.norm()
     H_rand = q.Qobj(lin.block_diag(H_rand[:],
                     np.zeros((N-len(coeff),N-len(coeff)))))
     s_e = q.sesolve(H_rand, s, [0.,error]).states[1]
-    return list(np.ndarray.flatten(s_e[:len(coeff)]))
+    if with_phase:
+        return s_e
+    else:
+        return list(np.ndarray.flatten(np.abs(s_e[:len(coeff)])**2))
     
 
 
@@ -313,19 +321,30 @@ def plot_func_sensitivity(epsilon_max, N_err=5, step_size=0.01):
     s=0
     max_coh = list((1./N_)*np.ones(N_)) 
     opt_res = find_max_func_half(N_,max_coh,[],False,s,n)
+    low_bound = -find_max_func_half(N_-1,list((N_/(N_-1))*
+                        np.array(max_coh)[:-1]),[],False,s,n)['fun']
     meas_coeff = opt_res['x']
     epsilon_list = np.linspace(0,epsilon_max,int(epsilon_max/step_size))
-    val_list = np.zeros((N_err,int(epsilon_max/step_size)))
+    alpha_list = np.empty((N_err,int(epsilon_max/step_size)))
+    val_list = np.empty((N_err,int(epsilon_max/step_size)))
     for i in range(N_err):
-        H_rand = q.rand_herm(N_,1)
+        H_rand = q.rand_dm_ginibre(N_,1)
         for j in range(len(epsilon_list)):
-            meas_coeff_err = imperfect_state(meas_coeff,epsilon_list[j],H_rand)
-            val_list[i][j] = -func(max_coh+meas_coeff_err,s,n)
+            meas_coeff_err = imperfect_state(meas_coeff,epsilon_list[j],
+                                             H_rand,with_phase=True)
+            alpha_list[i][j] = np.sqrt(np.sum(np.abs(np.ndarray.flatten(
+                            meas_coeff_err[:N_])-np.sqrt(meas_coeff))**2))
+            m_state = meas_coeff_err
+            system = mixed_state(max_coh,s)
+            val_list[i][j] = moment(n)/moment(1)**(n-1)#-func(max_coh+meas_coeff_err,s,n)
+
     for i in range(N_err):
-        plt.plot(epsilon_list,val_list[i])
-    plt.xlim(0,epsilon_max)
-    plt.xlabel('epsilon')
-    plt.ylabel('M'+n+'/M1^'+(n-1))
+        #plt.plot(epsilon_list,val_list[i])
+        plt.plot(alpha_list[i],val_list[i])
+    plt.plot([0.,np.max(alpha_list)],[low_bound,low_bound],'k--')
+    plt.xlim(0,np.max(alpha_list))
+    plt.xlabel('||U|x>-|x>||')
+    plt.ylabel('M'+str(n)+'/M1^'+str((n-1)))
 
 
 
