@@ -7,7 +7,7 @@ import scipy.optimize as opt
 import scipy.linalg as lin
 import scipy.misc as misc
 
-warnings=True
+warnings=False
 N=10
 H = q.num(N,1)
 #nss=0.5
@@ -32,6 +32,8 @@ def mixed_state(coeff, s):
      
 def state(*coeff):
     if (np.sum(coeff) != 1 or len(coeff)>N) and warnings:
+        print(np.sum(coeff), len(coeff))
+        print(np.sum(coeff) != 1, len(coeff) > 0)
         raise ValueError('There must be at most N probabilities that sum to 1')
     state = np.sqrt(coeff[0]) * q.basis(N,0)
     for i in range(len(coeff)-1):
@@ -45,6 +47,13 @@ def two_coherent(c1):
     state += np.sqrt(1-c1) * q.basis(N,1)
     return state
 
+def EpsState(coeff, eps):
+     c = coeff.copy()
+     c.append(eps*eps)
+     for i in range(len(c)):
+          c[i] /= (1+eps*eps)
+     return c
+     
 
 def ratio_anal(k):
     return ((1/k)+(6/k**3)*((1/6.)*k*(k-1)*(2*k-1)) + 
@@ -181,6 +190,7 @@ def plot_max_func(steps=10,moment_no=3):
     func_vals = np.empty((steps,steps))
     for i in range(len(s_coeff)):
         for j in range(len(m_coeff)):
+            print(i,j)
             system = q.ket2dm(two_coherent(s_coeff[i]))
             m_state = two_coherent(m_coeff[j])
             #func_vals[i,j] = moment(moment_no)
@@ -192,6 +202,89 @@ def plot_max_func(steps=10,moment_no=3):
     ax.plot_surface(s_c,m_c,func_vals)
     plt.show()
 
+
+
+def error_prob(t, chi, psi, eps):
+    k = chi.size
+    coses = np.cos((k+1-np.arange(1,k+1))*t)
+
+    error = eps**4 + 2*eps*eps*np.sum(np.sqrt(psi)*np.sqrt(chi)*coses)
+    return error
+
+def error_integrand(t, n, chi, psi, eps, order=0):
+    if order==0:
+        prob = prob_dist(t) + error_prob(t, chi, psi, eps)
+        integrand = np.power(prob, n)
+    elif order==1:
+        integrand = np.power(prob_dist(t), n) + n*error_prob(
+            t, chi, psi, eps)*np.power(prob_dist(t), n-1)
+    elif order==2:
+        integrand = np.power(prob_dist(t), n) + n*error_prob(
+            t, chi, psi, eps)*np.power(prob_dist(t), n-1) + n*(n-1)/2*np.power(
+            error_prob(t, chi, psi, eps), 2) * np.power(prob_dist(t), n-2)
+    
+    return integrand
+
+def calc_hierarchy_approx(coeff, eps, n=3, order=0):
+    k = int(len(coeff)/2)
+    psi = np.array(coeff[:k])
+    chi = np.array(coeff[k:])
+    global system
+    global m_state
+    system = q.ket2dm(state(*coeff[:k]))
+    m_state = state(*coeff[k:])
+    
+    og_res = -func(coeff, n=n)
+    eps_psi = EpsState(list(psi), eps)
+    eps_chi = EpsState(list(chi), eps)
+    expec_res = -func(eps_psi+eps_chi, n=n)
+    
+    system = q.ket2dm(state(*coeff[:k]))
+    m_state = state(*coeff[k:])
+    
+    omega = np.sum(psi*chi)
+    e1 = (1+eps*eps)**2
+    e2 = (omega + eps**4)**(n-1)
+    denom = e1 * e2
+    
+    
+    numer = 1/(2*np.pi) * ig.quad(
+            error_integrand, 0., 2*np.pi, (n, chi, psi, eps, order), 
+            full_output=0)[0]
+    
+    return og_res, numer/denom, expec_res, (e1, omega, e2)
+
+
+
+def check_hierarchy(k, epsila, iters, n=3, order=0, coeffs=None):
+    results = np.zeros((3, len(epsila), iters))
+    errors = np.zeros((3, len(epsila), iters))
+    bad_coeffs = []
+    
+    for i in range(iters):
+        if coeffs is None:
+            chi = list(*np.random.dirichlet(np.ones(k),size=1))
+            psi = chi #list(*np.random.dirichlet(np.ones(k),size=1))
+            coeff = chi+psi
+        else:
+            coeff = coeffs[i]
+        for j in range(len(epsila)):
+            if j%10==0: print(i,j)
+            og, res, exp, errs = calc_hierarchy_approx(coeff, epsila[j], n=n, 
+                                                       order=order)
+            results[0,j,i] = og
+            results[1,j,i] = res
+            results[2,j,i] = exp
+            errors[0,j,i] = errs[0]
+            errors[1,j,i] = errs[1]
+            errors[2,j,i] = errs[2]
+        
+        if np.where(results[0,1:5,i] > results[1,1:5,i])[0].size>0:
+            bad_coeffs.append(coeff)
+    return results, errors, bad_coeffs
+            
+        
+         
 
 def func(args, s=0, n=3):
     global warnings
@@ -393,13 +486,20 @@ def minimise_pattern_diff(N_, thresh = False, redund=1):
     opt_res = find_max_func_half(N_,max_coh,[],True,0,n)
     meas_coeff = opt_res['x']
     m_state = state(*meas_coeff)
-
-    #m_state = q.Qobj(np.concatenate([q.rand_ket(N_)[:].T[0],np.zeros(N-N_)]).T)
+    print(m_state)
+    
+    m_state = q.Qobj(np.concatenate([q.rand_ket(N_)[:].T[0],np.zeros(N-N_)]).T)
+    print(m_state)
+    
     if thresh == False:
         threshold = find_mixed_thresh(N_,n)[0]
+        print(threshold)
     else:
         threshold=thresh
     system = mixed_state(max_coh, threshold)
+    print(system)
+#    system = q.ket2dm(np.concatenate([q.rand_ket(N_)[:].T[0],np.zeros(N-N_)]).T, threshold)
+#    print(system)
 
     state_no = int(misc.comb(N_,N_-1))
     
@@ -497,7 +597,6 @@ def plot_max_pattern(n):
     plt.legend()
     
     return vals, syst, meas
-
 
 
 
