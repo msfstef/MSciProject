@@ -388,21 +388,87 @@ def plot_mixed_thresh(n_max, N_max, error=0):
     Nvals = np.arange(3,N_max+1)
     vals = np.empty((len(nvals),len(Nvals)))
     for i in range(len(nvals)):
+#        vals = np.array([[ 0.19, 0.13, 0.1,  0.08, 0.06, 0.06, 0.05, 0.04],
+#[ 0.28, 0.19, 0.14, 0.11, 0.09, 0.08, 0.07, 0.06],
+# [ 0.33, 0.22, 0.16, 0.13, 0.11, 0.09, 0.08, 0.07],
+# [ 0.36, 0.24, 0.18, 0.14, 0.12, 0.1,  0.09, 0.08],
+# [ 0.39, 0.26, 0.19, 0.15, 0.13, 0.11, 0.1,  0.09],
+# [ 0.4,  0.27, 0.2,  0.16, 0.13, 0.11, 0.1,  0.09],
+# [ 0.41, 0.28, 0.21, 0.16, 0.14, 0.12, 0.11, 0.09],
+# [ 0.42, 0.28, 0.21, 0.17, 0.14, 0.12, 0.1,  0.1 ],
+# [ 0.43, 0.29, 0.21, 0.17, 0.15, 0.12, 0.11, 0.1 ],
+# [ 0.44, 0.29, 0.22, 0.18, 0.14, 0.13, 0.11, 0.1 ],
+# [ 0.44, 0.29, 0.22, 0.18, 0.15, 0.13, 0.11, 0.1 ],
+# [ 0.45, 0.3,  0.22, 0.18, 0.15, 0.13, 0.11, 0.1 ],
+# [ 0.45, 0.3,  0.23, 0.18, 0.15, 0.13, 0.11, 0.1 ]])
+#        break
         for j in range(len(Nvals)):
-            print(i,j)
+            print(i+3,j+3)
             vals[i,j]= find_mixed_thresh(Nvals[j],nvals[i], error)[0]
+            
+    
     n_vals, N_vals = np.meshgrid(Nvals,nvals)
     print(nvals,Nvals)
     print(vals)
-    fig = plt.figure()
+    
+    
+    plt.figure(1)
+    for i in range(len(Nvals)):
+        y_vals = vals[:,i]
+        x_vals = nvals
+        plt.plot(x_vals,y_vals, 'b-')
+        plt.plot(nvals, (1/(Nvals[i]-1))*np.ones(len(nvals)), 'r--', alpha=0.5)
+    plt.ylabel('$\lambda_{th}$')
+    plt.xlabel('Moment Index n')
+    
+    plt.figure(2)
+    for i in range(len(Nvals)):
+        theory = (1/(Nvals[i]-1))*np.ones(len(nvals))
+        y_vals = (theory-vals[:,i])/theory
+        x_vals = nvals
+        plt.plot(x_vals,y_vals)
+        plt.ylabel(r'Fractional Difference', fontsize=16)
+        plt.xlabel(r'Moment Index $n$', fontsize=16)
+        plt.xlim(3,n_max)
+        
+    
+    
+    
+    fig = plt.figure(3)
     ax = fig.gca(projection='3d')
     ax.plot_surface(n_vals,N_vals,vals,cmap='winter',antialiased=False,linewidth=0)
+    
+    # Theoretical k-1 threshold
+    for i in range(len(Nvals)):
+        theor_thresh = (1./(Nvals[i]-1))*np.ones(len(nvals))
+        dummy_n = Nvals[i]*np.ones(len(nvals))
+        ax.plot(dummy_n, nvals, theor_thresh, 'r--', alpha=0.5)
+    
     ax.xaxis.set_rotate_label(False)
     ax.yaxis.set_rotate_label(False)
-    ax.zaxis.set_rotate_label(False)
+    ax.zaxis.set_rotate_label(True)
     ax.set_xlabel(r'$k$',fontsize=16)
     ax.set_ylabel(r'$n$',fontsize=16)
-    ax.set_zlabel(r'$\lambda_{th}$',fontsize=16)
+    ax.set_zlabel(r'$\lambda_{thresh}$',fontsize=16)
+    plt.show()
+    
+    fig = plt.figure(4)
+    ax = fig.gca(projection='3d')
+    # Theoretical k-1 threshold
+    for i in range(len(Nvals)):
+        theor_thresh = (1./(Nvals[i]-1))*np.ones(len(nvals))
+        dummy_n = Nvals[i]*np.ones(len(nvals))
+        ax.plot(dummy_n, nvals, theor_thresh, 'r--', alpha=0.5)
+        ax.plot(dummy_n, nvals, vals[:,i], 'b-')
+    
+    ax.xaxis.set_rotate_label(False)
+    ax.yaxis.set_rotate_label(False)
+    ax.zaxis.set_rotate_label(True)
+    ax.set_xlabel(r'$k$',fontsize=16)
+    ax.set_ylabel(r'$n$',fontsize=16)
+    ax.set_zlabel(r'$\lambda_{thresh}$',fontsize=16)
+    ax.set_xlim(3,N_max)
+    ax.set_ylim(3,n_max)
     plt.show()
 
 
@@ -436,8 +502,8 @@ def plot_func_sensitivity(epsilon_max, N_err=5, step_size=0.01):
         plt.plot(alpha_list[i],val_list[i])
     plt.plot([0.,np.max(alpha_list)],[low_bound,low_bound],'k--')
     plt.xlim(0,np.max(alpha_list))
-    plt.xlabel('||U|x>-|x>||')
-    plt.ylabel('M'+str(n)+'/M1^'+str((n-1)))
+    plt.xlabel('||U|x>-|x>||', fontsize=16)
+    plt.ylabel(r'$F_3$',fontsize=16, rotate=90)
 
 
 
@@ -486,10 +552,10 @@ def minimise_pattern_diff(N_, thresh = False, redund=1):
     opt_res = find_max_func_half(N_,max_coh,[],True,0,n)
     meas_coeff = opt_res['x']
     m_state = state(*meas_coeff)
-    print(m_state)
+    #print(m_state)
     
-    m_state = q.Qobj(np.concatenate([q.rand_ket(N_)[:].T[0],np.zeros(N-N_)]).T)
-    print(m_state)
+    #m_state = q.Qobj(np.concatenate([q.rand_ket(N_)[:].T[0],np.zeros(N-N_)]).T)
+    #print(m_state)
     
     if thresh == False:
         threshold = find_mixed_thresh(N_,n)[0]
@@ -497,7 +563,7 @@ def minimise_pattern_diff(N_, thresh = False, redund=1):
     else:
         threshold=thresh
     system = mixed_state(max_coh, threshold)
-    print(system)
+    #print(system)
 #    system = q.ket2dm(np.concatenate([q.rand_ket(N_)[:].T[0],np.zeros(N-N_)]).T, threshold)
 #    print(system)
 
