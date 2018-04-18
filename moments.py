@@ -200,13 +200,16 @@ def plot_max_func(steps=10,moment_no=3):
             #func_vals[i,j]= moment(moment_no)/moment(1)**(moment_no-1)
     s_c, m_c = np.meshgrid(s_coeff, m_coeff)
     
-    plt.figure()
+    fig=plt.figure()
     
-    ax = plt.subplot2grid((2,3),(0,0),rowspan=2,colspan=2,projection='3d')
-    ax2 = plt.subplot2grid((2,3),(1,2),rowspan=1,colspan=1)
-    ax3 = plt.subplot2grid((2,3),(0,2),rowspan=1,colspan=1)
+    manyax=False
+    if (manyax):
+        ax = plt.subplot2grid((2,3),(0,0),rowspan=2,colspan=2,projection='3d')
+        ax2 = plt.subplot2grid((2,3),(1,2),rowspan=1,colspan=1)
+        ax3 = plt.subplot2grid((2,3),(0,2),rowspan=1,colspan=1)
+    else:
+        ax = fig.gca(projection='3d')
 
-    #ax = fig.gca(projection='3d')
     ax.plot_surface(s_c,m_c,func_vals, cmap='Greens_r')
     
     max_coh_vals = np.empty(len(s_coeff))
@@ -215,11 +218,12 @@ def plot_max_func(steps=10,moment_no=3):
     for i in range(len(s_coeff)):
         system = q.ket2dm(two_coherent(s_coeff[i]))
         m_state = two_coherent(0.5)
-        max_coh_vals[i] = moment(moment_no)
-        m_state = two_coherent(moment_no/float(moment_no+1))
-        not_rob_vals[i] = moment(moment_no)
-        m_state = two_coherent(1/float(moment_no+1))
-        not_rob_vals2[i] = moment(moment_no)
+        if manyax:
+            max_coh_vals[i] = moment(moment_no)
+            m_state = two_coherent(moment_no/float(moment_no+1))
+            not_rob_vals[i] = moment(moment_no)
+            m_state = two_coherent(1/float(moment_no+1))
+            not_rob_vals2[i] = moment(moment_no)
     
     ax.plot(s_coeff,np.ones(len(s_coeff))*0.5, max_coh_vals, 'b--')
     ax.plot(s_coeff,np.ones(len(s_coeff))*moment_no/float(moment_no+1),
@@ -236,20 +240,21 @@ def plot_max_func(steps=10,moment_no=3):
     ax.set_ylim(1,0)
     ax.set_xlim(0,1)
     
-    ax2.plot(s_coeff, max_coh_vals, 'b--')
-    ax2.set_xlim(0,1)
-    ax2.set_ylim(0,1)
-    ax2.set_xlabel(r'$|\psi_1|^2$')
-    ax2.set_ylabel(r'$M_3$', rotation='horizontal')
+    if manyax:
+        ax2.plot(s_coeff, max_coh_vals, 'b--')
+        ax2.set_xlim(0,1)
+        ax2.set_ylim(0,1)
+        ax2.set_xlabel(r'$|\psi_1|^2$')
+        ax2.set_ylabel(r'$M_3$', rotation='horizontal')
 
 
-    ax3.plot(s_coeff,not_rob_vals,'r-.')
-    ax3.set_xlim(0,1)
-    ax3.set_ylim(0,1)
-    ax3.set_xlabel(r'$|\psi_1|^2$')
-    ax3.set_ylabel(r'$M_3$',rotation='horizontal')
+        ax3.plot(s_coeff,not_rob_vals,'r-.')
+        ax3.set_xlim(0,1)
+        ax3.set_ylim(0,1)
+        ax3.set_xlabel(r'$|\psi_1|^2$')
+        ax3.set_ylabel(r'$M_3$',rotation='horizontal')
     
-    plt.tight_layout()
+        plt.tight_layout()
 
 
 
