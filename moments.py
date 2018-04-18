@@ -195,15 +195,15 @@ def plot_max_func(steps=10,moment_no=3):
             print(i,j)
             system = q.ket2dm(two_coherent(s_coeff[i]))
             m_state = two_coherent(m_coeff[j])
-            func_vals[i,j] = moment(moment_no)
-            #func_vals[i,j] = mom_func3(2,3,1)
+            #func_vals[i,j] = moment(moment_no)
+            func_vals[i,j] = mom_func(3,2,3,1)
             #func_vals[i,j]= moment(moment_no)/moment(1)**(moment_no-1)
     s_c, m_c = np.meshgrid(s_coeff, m_coeff)
     
     fig=plt.figure()
     
     manyax=False
-    if (manyax):
+    if manyax:
         ax = plt.subplot2grid((2,3),(0,0),rowspan=2,colspan=2,projection='3d')
         ax2 = plt.subplot2grid((2,3),(1,2),rowspan=1,colspan=1)
         ax3 = plt.subplot2grid((2,3),(0,2),rowspan=1,colspan=1)
@@ -225,10 +225,11 @@ def plot_max_func(steps=10,moment_no=3):
             m_state = two_coherent(1/float(moment_no+1))
             not_rob_vals2[i] = moment(moment_no)
     
-    ax.plot(s_coeff,np.ones(len(s_coeff))*0.5, max_coh_vals, 'b--')
-    ax.plot(s_coeff,np.ones(len(s_coeff))*moment_no/float(moment_no+1),
+    if manyax:
+        ax.plot(s_coeff,np.ones(len(s_coeff))*0.5, max_coh_vals, 'b--')
+        ax.plot(s_coeff,np.ones(len(s_coeff))*moment_no/float(moment_no+1),
             not_rob_vals, 'r-.')
-    ax.plot(s_coeff,np.ones(len(s_coeff))*1/float(moment_no+1),
+        ax.plot(s_coeff,np.ones(len(s_coeff))*1/float(moment_no+1),
             not_rob_vals2, 'r-.')
     
     ax.set_ylabel(r'$|\chi_1|^2$')
